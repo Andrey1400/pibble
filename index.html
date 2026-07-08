@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="color-scheme" content="only light">
+    <meta name="theme-color" content="#87CEEB">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pibble Food Rush - Arcade Mode</title>
+    <style>
+        :root { color-scheme: only light; }
+
+        body {
+            margin: 0; padding: 0; background-color: #222;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none;
+        }
+        
+        #game-container {
+            position: relative; width: 360px; height: 640px;
+            background-color: #87CEEB; transition: background-color 0.8s ease;
+            overflow: hidden; box-shadow: 0 0 30px rgba(0,0,0,0.8); border-radius: 8px;
+        }
+
+        canvas, img { 
+            image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges; image-rendering: pixelated; 
+            -webkit-filter: invert(0) hue-rotate(0deg) !important; filter: invert(0) hue-rotate(0deg) !important;
+            mix-blend-mode: normal !important;
+        }
+
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        #hud {
+            position: absolute; top: 10px; left: 10px; right: 10px;
+            display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 5px;
+            font-size: 14px; font-weight: bold; color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8); pointer-events: none; z-index: 5;
+        }
+        .hud-bar { background: rgba(0,0,0,0.5); padding: 6px 10px; border-radius: 10px; }
+
+        /* HUD LATERAL DOS PODERES */
+        #powers-hud {
+            position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 15px; z-index: 5;
+        }
+        .power-item {
+            width: 45px; height: 45px; background: rgba(0,0,0,0.6); border-radius: 8px;
+            display: flex; justify-content: center; align-items: center; position: relative;
+            border: 3px solid transparent; cursor: pointer; transition: all 0.2s;
+            pointer-events: auto;
+        }
+        .power-item img { width: 30px; height: 30px; object-fit: contain; }
+        .power-item span {
+            position: absolute; bottom: -8px; right: -8px; background: #e74c3c; color: white;
+            font-size: 12px; font-weight: bold; padding: 2px 6px; border-radius: 10px; border: 2px solid white;
+        }
+        .power-item.selected { border-color: #f1c40f; background: rgba(241, 196, 15, 0.4); transform: scale(1.1); }
+
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); display: none; flex-direction: column; 
+            align-items: center; justify-content: center; color: white; text-align: center; z-index: 10;
+        }
+        .overlay h1 { font-size: 32px; margin-bottom: 5px; color: #FFD700; }
+        .overlay p { font-size: 16px; margin-bottom: 15px; }
+
+        #startScreen { background: #87CEEB; display: flex; z-index: 20; }
+        #startScreen h1 { font-size: 36px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5); margin-bottom: 20px; padding: 0 10px; }
+        #startScreen img { width: 120px; height: 120px; margin-bottom: 20px; object-fit: contain; }
+
+        .btn {
+            background: #e74c3c; color: white; border: none; padding: 15px 40px;
+            font-size: 20px; border-radius: 8px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 5px 0 #c0392b; transition: all 0.1s; margin-bottom: 10px; width: 220px; text-align: center;
+        }
+        .btn.shop-btn { background: #f39c12; box-shadow: 0 5px 0 #d35400; }
+        .btn.ad-btn { background: #2ecc71; box-shadow: 0 5px 0 #27ae60; }
+        .btn:active { transform: translateY(5px); box-shadow: 0 0 0 transparent !important; }
+        .btn:disabled { background: #7f8c8d; box-shadow: 0 5px 0 #636e72; cursor: not-allowed; }
+
+        #shopScreen {
+            background: #2c3e50; display: none; z-index: 30; padding: 10px; 
+            box-sizing: border-box; justify-content: flex-start; overflow-y: auto;
+        }
+        .shop-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; flex-shrink: 0; }
+        #shopScreen h2 { margin: 0; color: #FFD700; font-size: 20px; }
+        .shop-coins { font-size: 18px; font-weight: bold; color: white; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 10px; }
+        
+        .shop-section-title { width: 100%; text-align: left; color: #FFD700; font-size: 18px; margin: 10px 0 5px 0; border-bottom: 1px solid #7f8c8d; padding-bottom: 5px; flex-shrink: 0; }
+        
+        .powers-container { display: flex; gap: 10px; justify-content: center; width: 100%; margin-bottom: 15px; flex-shrink: 0; }
+        .power-card { background: #34495e; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; width: 90px; }
+        .power-card img { width: 40px; height: 40px; margin-bottom: 5px; object-fit: contain; }
+        .power-card .price { font-weight: bold; color: #f1c40f; font-size: 14px; margin-bottom: 5px; }
+        .buy-power-btn { background: #2ecc71; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; font-size: 12px; }
+        .buy-power-btn:disabled { background: #7f8c8d; }
+        .buy-power-btn:active { transform: translateY(2px); }
+
+        #chest-area {
+            background: #34495e; padding: 15px; border-radius: 10px; border: 2px dashed #f1c40f;
+            display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; width: 90%; flex-shrink: 0;
+            margin-left: auto; margin-right: auto;
+        }
+        #chest-area img { width: auto; max-width: 80px; height: 60px; object-fit: contain; margin-bottom: 10px; }
+        .buy-chest-btn { background: #9b59b6; color: white; border: none; padding: 10px 20px; font-weight: bold; font-size: 16px; border-radius: 5px; cursor: pointer; box-shadow: 0 4px 0 #8e44ad; }
+        .buy-chest-btn:active { transform: translateY(4px); box-shadow: 0 0 0 transparent !important; }
+
+        .skins-container {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; padding-bottom: 20px; flex-shrink: 0;
+        }
+        .skin-card {
+            background: #2c3e50; border: 2px solid #7f8c8d; border-radius: 6px;
+            width: 100%; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; position: relative; box-sizing: border-box;
+        }
+        .skin-card.equipped { border-color: #2ecc71; background: #27ae60; }
+        .skin-card.legendary { border-color: #f1c40f; box-shadow: 0 0 8px #f1c40f; }
+        .skin-card.rare { border-color: #3498db; }
+        .skin-card h3 { margin: 0 0 3px 0; font-size: 9px; color: white; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+        .skin-img { width: auto; max-width: 32px; height: 28px; object-fit: contain; margin-bottom: 3px; }
+        .rarity-tag { font-size: 6px; font-weight: bold; padding: 1px 3px; border-radius: 3px; margin-bottom: 3px; text-transform: uppercase; }
+        .tag-normal { background: #7f8c8d; color: white; }
+        .tag-rare { background: #3498db; color: white; }
+        .tag-legendary { background: #f1c40f; color: black; }
+        .pieces-info { font-size: 8px; color: #bdc3c7; margin-bottom: 3px; font-weight: bold; text-align: center; }
+        .progress-bar { width: 100%; height: 6px; background: #1a252f; border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
+        .progress-fill { height: 100%; background: #e67e22; width: 0%; transition: width 0.3s; }
+        .equip-btn { background: #3498db; color: white; border: none; padding: 3px 2px; font-weight: bold; border-radius: 4px; cursor: pointer; width: 100%; font-size: 9px; }
+        .equipped-txt { color: white; font-weight: bold; font-size: 9px; margin: 3px 0; text-align: center; }
+
+        #shopScreen::-webkit-scrollbar { width: 6px; }
+        #shopScreen::-webkit-scrollbar-track { background: #1a252f; }
+        #shopScreen::-webkit-scrollbar-thumb { background: #f39c12; border-radius: 3px; }
+
+        #chestResultScreen { background: rgba(0,0,0,0.95); display: none; z-index: 40; }
+        #chestResultScreen img { width: auto; max-width: 120px; height: 120px; object-fit: contain; margin: 20px 0; animation: pop 0.5s ease-out; }
+        .result-title { font-size: 28px; color: #f1c40f; }
+        .result-desc { font-size: 18px; margin-bottom: 20px; color: white; }
+        @keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        #adScreen { background: #000; display: none; z-index: 50; flex-direction: column; justify-content: center; align-items: center; color: white; }
+        #adScreen h2 { color: #f1c40f; margin-bottom: 20px; }
+        .ad-box { width: 300px; height: 250px; background: #333; border: 2px dashed #777; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; color: #aaa; text-align: center; }
+        #adCountdown { font-size: 24px; font-weight: bold; color: #e74c3c; }
+
+        /* RECOMPENSA DE LOGIN DIÁRIO */
+        #dailyRewardScreen { background: rgba(0,0,0,0.9); display: none; z-index: 60; padding: 15px; box-sizing: border-box; }
+        #dailyRewardScreen h1 { font-size: 26px; margin-bottom: 5px; }
+        #dailyRewardScreen p.subtitle { font-size: 13px; color: #bdc3c7; margin-bottom: 15px; }
+        .days-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 15px; max-width: 320px; }
+        .day-box {
+            width: 78px; height: 90px; background: #34495e; border-radius: 8px; border: 2px solid #7f8c8d;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;
+        }
+        .day-box .day-label { font-size: 11px; color: #bdc3c7; font-weight: bold; }
+        .day-box .day-reward { font-size: 13px; font-weight: bold; color: #FFD700; margin-top: 4px; text-align: center; }
+        .day-box.done { background: #27ae60; border-color: #2ecc71; opacity: 0.7; }
+        .day-box.done::after { content: '✔️'; position: absolute; top: 2px; right: 4px; font-size: 12px; }
+        .day-box.today { border-color: #f1c40f; box-shadow: 0 0 12px #f1c40f; transform: scale(1.08); }
+        .day-box.chest-day { background: linear-gradient(#8e44ad, #6c3483); border-color: #f1c40f; }
+        .day-box.chest-day .day-reward { color: white; }
+        #dailyRewardCurrentBox { background: rgba(0,0,0,0.5); border-radius: 10px; padding: 12px 20px; margin-bottom: 15px; text-align: center; }
+        #dailyRewardCurrentBox .amount { font-size: 24px; font-weight: bold; color: #FFD700; }
+        .double-btn { background: #2ecc71; box-shadow: 0 5px 0 #27ae60; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <div id="startScreen" class="overlay">
+            <h1>Pibble Food Rush</h1>
+            <img src="skins/skin1.png" id="mainMenuImage" alt="Pibble">
+            <button class="btn" onclick="iniciarNovaPartida()">JOGAR</button>
+            <button class="btn shop-btn" onclick="openShop()">LOJA 🛒</button>
+        </div>
+
+        <div id="dailyRewardScreen" class="overlay">
+            <h1>🎁 Recompensa Diária</h1>
+            <p class="subtitle">Entre todo dia para ganhar prêmios! Complete os 7 dias para o Baú Especial.</p>
+            <div class="days-grid" id="dailyRewardGrid"></div>
+            <div id="dailyRewardCurrentBox">
+                <div>Hoje você ganha:</div>
+                <div class="amount" id="dailyRewardAmount">0 💰</div>
+            </div>
+            <button class="btn" onclick="coletarRecompensaDiaria(false)">Coletar</button>
+            <button class="btn double-btn ad-btn" id="btnDobrarRecompensa" onclick="dobrarRecompensaDiaria()">Dobrar (Anúncio) 📺</button>
+        </div>
+
+        <div id="shopScreen" class="overlay">
+            <div class="shop-header">
+                <h2>Loja</h2>
+                <div class="shop-coins"><span id="shopCoinsDisplay">0</span> 💰</div>
+            </div>
+
+            <div class="shop-section-title">Comprar Moedas 💎</div>
+            <div class="powers-container" id="coinPacksContainer">
+                <div class="power-card">
+                    <img src="coin.png" alt="Moedas">
+                    <span class="price" id="priceSmall">R$ --</span>
+                    <button class="buy-power-btn" style="background:#3498db;" onclick="comprarMoedasReais('coins_small')">300 💰</button>
+                </div>
+                <div class="power-card">
+                    <img src="coin.png" alt="Moedas">
+                    <span class="price" id="priceMedium">R$ --</span>
+                    <button class="buy-power-btn" style="background:#3498db;" onclick="comprarMoedasReais('coins_medium')">800 💰</button>
+                </div>
+                <div class="power-card">
+                    <img src="coin.png" alt="Moedas">
+                    <span class="price" id="priceLarge">R$ --</span>
+                    <button class="buy-power-btn" style="background:#3498db;" onclick="comprarMoedasReais('coins_large')">2000 💰</button>
+                </div>
+            </div>
+
+            <div class="shop-section-title">Comprar Poderes</div>
+            <div class="powers-container">
+                <div class="power-card">
+                    <img src="boost_magnet.png" alt="Ímã" onerror="this.src='coin.png'">
+                    <span class="price">50 💰</span>
+                    <button class="buy-power-btn" id="btnBuyMagnet" onclick="buyPower('magnet', 50)">Comprar</button>
+                </div>
+                <div class="power-card">
+                    <img src="boost_size.png" alt="Tamanho" onerror="this.src='coin.png'">
+                    <span class="price">50 💰</span>
+                    <button class="buy-power-btn" id="btnBuySize" onclick="buyPower('size', 50)">Comprar</button>
+                </div>
+                <div class="power-card">
+                    <img src="boost_life.png" alt="Vida" onerror="this.src='coin.png'">
+                    <span class="price">150 💰</span>
+                    <button class="buy-power-btn" id="btnBuyLife" onclick="buyPower('life', 150)">Comprar</button>
+                </div>
+            </div>
+            
+            <div class="shop-section-title">Gacha de Skins</div>
+            <div id="chest-area">
+                <img src="bau.png" alt="Baú de Skins" onerror="this.src='coin.png'">
+                <button class="buy-chest-btn" id="btnComprarBau" onclick="abrirBau(100)">Abrir Baú (100💰)</button>
+            </div>
+
+            <div class="skins-container" id="skinsContainer"></div>
+            <button class="btn" style="margin-top: 10px; width: 90%; padding: 10px; flex-shrink: 0;" onclick="closeShop()">VOLTAR</button>
+        </div>
+
+        <div id="chestResultScreen" class="overlay">
+            <h1 class="result-title">VOCÊ CONSEGUIU!</h1>
+            <img src="" id="chestResultImg" alt="Pedaço de Skin">
+            <p class="result-desc" id="chestResultText">1x Pedaço</p>
+            <button class="btn" onclick="fecharResultadoBau()">Incrível!</button>
+        </div>
+
+        <div id="hud">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div class="hud-bar">Pts: <span id="score">0</span></div>
+                <div class="hud-bar" style="font-size: 11px; background: rgba(0,0,0,0.6); color: #FFD700; border: 1px solid #FFD700; padding: 3px 8px;">Recorde: <span id="highScoreDisplay">0</span></div>
+            </div>
+            <div class="hud-bar">Vidas: <span id="lives">3</span>❤️</div>
+            <div class="hud-bar" style="color: #FFD700;">Moedas: <span id="coinsDisplay">0</span>💰</div>
+        </div>
+
+        <div id="powers-hud" style="display: none;">
+            <div class="power-item selected" id="ui-magnet" onclick="selectPower('magnet')">
+                <img src="boost_magnet.png" alt="Ímã" onerror="this.style.display='none'">
+                <span id="count-magnet">0</span>
+            </div>
+            <div class="power-item" id="ui-size" onclick="selectPower('size')">
+                <img src="boost_size.png" alt="Gigante" onerror="this.style.display='none'">
+                <span id="count-size">0</span>
+            </div>
+            <div class="power-item" id="ui-life" onclick="selectPower('life')">
+                <img src="boost_life.png" alt="Vida Extra" onerror="this.style.display='none'">
+                <span id="count-life">0</span>
+            </div>
+        </div>
+
+        <div id="gameOverScreen" class="overlay">
+            <h1>GAME OVER</h1>
+            <p>Você deixou a ração cair!</p>
+            <p>Pontuação Final: <span id="finalScore">0</span></p>
+            <button class="btn ad-btn" id="reviveBtn" onclick="assistirAnuncioParaReviver()">Reviver (Anúncio) 📺</button>
+            <button class="btn" onclick="iniciarNovaPartida()">Jogar Novamente</button>
+            <button class="btn shop-btn" onclick="openShopFromGameOver()">LOJA 🛒</button>
+        </div>
+
+        <div id="adScreen" class="overlay">
+            <h2>PATROCINADOR</h2>
+            <div class="ad-box">[Espaço reservado para o Anúncio Real]</div>
+            <p>O anúncio terminará em: <span id="adCountdown">5</span>s</p>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 360; canvas.height = 640;
+        
+        ctx.imageSmoothingEnabled = false;
+
+        const skinsList = [
+            { id: 'skin_1', name: 'Padrão', rarity: 'normal', requiredPieces: 4, img: 'skins/skin1.png', imgEat: 'skins/skin1eat.png' },
+            { id: 'skin_2', name: 'Bob', rarity: 'normal', requiredPieces: 4, img: 'skins/skin2.png', imgEat: 'skins/skin2eat.png' },
+            { id: 'skin_3', name: 'Naty', rarity: 'normal', requiredPieces: 4, img: 'skins/skin3.png', imgEat: 'skins/skin3eat.png' },
+            { id: 'skin_4', name: 'Edy', rarity: 'normal', requiredPieces: 4, img: 'skins/skin4.png', imgEat: 'skins/skin4eat.png' },
+            { id: 'skin_5', name: 'Alien', rarity: 'rare', requiredPieces: 4, img: 'skins/skin5.png', imgEat: 'skins/skin5eat.png' },
+            { id: 'skin_6', name: 'Rei', rarity: 'legendary', requiredPieces: 1, img: 'skins/skin6.png', imgEat: 'skins/skin6eat.png' },
+            { id: 'skin_7', name: 'Guerreiro', rarity: 'normal', requiredPieces: 4, img: 'skins/skin7.png', imgEat: 'skins/skin7eat.png' },
+            { id: 'skin_8', name: 'Douradinho', rarity: 'rare', requiredPieces: 4, img: 'skins/skin8.png', imgEat: 'skins/skin8eat.png' },
+            { id: 'skin_9', name: 'Kawaii', rarity: 'rare', requiredPieces: 4, img: 'skins/skin9.png', imgEat: 'skins/skin9eat.png' },
+            { id: 'skin_10', name: 'Sério', rarity: 'normal', requiredPieces: 4, img: 'skins/skin10.png', imgEat: 'skins/skin10eat.png' }
+        ];
+
+        let savedCoins = localStorage.getItem('pibbleCoins');
+        let totalCoins = savedCoins ? parseInt(savedCoins) : 0;
+        
+        let unlockedSkins = JSON.parse(localStorage.getItem('pibbleUnlockedSkins')) || ['skin_1'];
+        let equippedSkinId = localStorage.getItem('pibbleEquippedSkin') || 'skin_1';
+        let skinPieces = JSON.parse(localStorage.getItem('pibbleSkinPieces')) || {};
+
+        let powers = JSON.parse(localStorage.getItem('pibblePowers')) || { magnet: 0, size: 0, life: 0 };
+        let selectedPower = 'magnet';
+
+        // ===================================================================
+        // RECOMPENSA DE LOGIN DIÁRIO
+        // ===================================================================
+        const DAILY_REWARDS = [
+            { day: 1, type: 'coins', coins: 50 },
+            { day: 2, type: 'boost', boostType: 'magnet', amount: 1, img: 'boost_magnet.png' },
+            { day: 3, type: 'coins', coins: 100 },
+            { day: 4, type: 'boost', boostType: 'size', amount: 1, img: 'boost_size.png' },
+            { day: 5, type: 'coins', coins: 150 },
+            { day: 6, type: 'boost', boostType: 'life', amount: 2, img: 'boost_life.png' },
+            { day: 7, type: 'chest' } // baú especial garantido
+        ];
+
+        let dailyStreak = parseInt(localStorage.getItem('pibbleDailyStreak')) || 0;
+        let lastLoginDate = localStorage.getItem('pibbleLastLoginDate') || null;
+        let lastClaimDate = localStorage.getItem('pibbleLastClaimDate') || null;
+        let pendingDailyReward = null; // { day, coins, isChest }
+
+        function dataDeHoje() {
+            return new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
+        }
+
+        function diasEntre(dataA, dataB) {
+            const a = new Date(dataA); const b = new Date(dataB);
+            return Math.round((b - a) / (1000 * 60 * 60 * 24));
+        }
+
+        function checarRecompensaDiaria() {
+            const hoje = dataDeHoje();
+
+            if (lastClaimDate === hoje) return; // já coletou hoje, não mostra de novo
+
+            if (!lastLoginDate) {
+                dailyStreak = 1; // primeira vez jogando
+            } else {
+                const diff = diasEntre(lastLoginDate, hoje);
+                if (diff === 1) {
+                    dailyStreak = dailyStreak >= 7 ? 1 : dailyStreak + 1; // avança na sequência, reinicia após o dia 7
+                } else if (diff > 1) {
+                    dailyStreak = 1; // quebrou a sequência
+                }
+                // diff === 0 não deveria ocorrer aqui pois já tratamos lastClaimDate === hoje acima
+            }
+
+            localStorage.setItem('pibbleLastLoginDate', hoje);
+            localStorage.setItem('pibbleDailyStreak', dailyStreak);
+
+            const configDia = DAILY_REWARDS[dailyStreak - 1];
+            pendingDailyReward = { day: dailyStreak, ...configDia, dobrado: false };
+
+            renderDailyRewardScreen();
+            document.getElementById('dailyRewardScreen').style.display = 'flex';
+        }
+
+        const NOMES_BOOST = { magnet: 'Ímã', size: 'Gigante', life: 'Vida Extra' };
+
+        function descreverRecompensa(r) {
+            if (r.type === 'chest') return '🎁 Baú';
+            if (r.type === 'boost') return `${r.amount}x ${NOMES_BOOST[r.boostType]}`;
+            return `${r.coins} 💰`;
+        }
+
+        function renderDailyRewardScreen() {
+            const grid = document.getElementById('dailyRewardGrid');
+            grid.innerHTML = '';
+            DAILY_REWARDS.forEach(r => {
+                const box = document.createElement('div');
+                let classes = 'day-box';
+                if (r.type === 'chest') classes += ' chest-day';
+                if (r.day < pendingDailyReward.day) classes += ' done';
+                if (r.day === pendingDailyReward.day) classes += ' today';
+                box.className = classes;
+                box.innerHTML = `
+                    <div class="day-label">Dia ${r.day}</div>
+                    <div class="day-reward">${descreverRecompensa(r)}</div>
+                `;
+                grid.appendChild(box);
+            });
+
+            const amountEl = document.getElementById('dailyRewardAmount');
+            amountEl.innerText = pendingDailyReward.type === 'chest' ? 'Baú Especial 🎁' : descreverRecompensa(pendingDailyReward);
+
+            // Boosts e o baú não fazem sentido dobrar (só dobramos moedas)
+            document.getElementById('btnDobrarRecompensa').style.display = pendingDailyReward.type === 'coins' ? 'block' : 'none';
+        }
+
+        function coletarRecompensaDiaria(viaAnuncio) {
+            if (!pendingDailyReward) return;
+
+            if (pendingDailyReward.type === 'chest') {
+                document.getElementById('dailyRewardScreen').style.display = 'none';
+                // Reaproveita o sistema de baú já existente: abre grátis (sem cobrar moedas)
+                let rng = Math.random(); let selectedRarity = 'normal';
+                if (rng <= 0.005) selectedRarity = 'legendary';
+                else if (rng <= 0.205) selectedRarity = 'rare';
+                let possiveis = skinsList.filter(s => s.rarity === selectedRarity && !unlockedSkins.includes(s.id));
+                if (possiveis.length === 0) possiveis = skinsList.filter(s => !unlockedSkins.includes(s.id));
+                if (possiveis.length === 0) {
+                    alert('Você já desbloqueou todas as skins disponíveis! Recebeu 100 💰 de bônus.');
+                    totalCoins += 100;
+                    localStorage.setItem('pibbleCoins', totalCoins);
+                    updateHUD();
+                } else {
+                    let skinSorteada = possiveis[Math.floor(Math.random() * possiveis.length)];
+                    processarRecompensa(skinSorteada);
+                }
+            } else if (pendingDailyReward.type === 'boost') {
+                powers[pendingDailyReward.boostType] += pendingDailyReward.amount;
+                localStorage.setItem('pibblePowers', JSON.stringify(powers));
+                updateHUD();
+                document.getElementById('dailyRewardScreen').style.display = 'none';
+            } else {
+                let valor = pendingDailyReward.coins * (pendingDailyReward.dobrado ? 2 : 1);
+                totalCoins += valor;
+                localStorage.setItem('pibbleCoins', totalCoins);
+                updateHUD();
+                document.getElementById('dailyRewardScreen').style.display = 'none';
+            }
+
+            localStorage.setItem('pibbleLastClaimDate', dataDeHoje());
+            pendingDailyReward = null;
+        }
+
+        function dobrarRecompensaDiaria() {
+            if (!pendingDailyReward || pendingDailyReward.type !== 'coins') return;
+            document.getElementById('dailyRewardScreen').style.display = 'none';
+            mostrarAnuncio(() => {
+                pendingDailyReward.dobrado = true;
+                document.getElementById('dailyRewardAmount').innerText = `${pendingDailyReward.coins * 2} 💰 (Dobrado!)`;
+                document.getElementById('dailyRewardScreen').style.display = 'flex';
+                document.getElementById('btnDobrarRecompensa').style.display = 'none'; // já dobrou, some o botão
+            });
+        }
+
+        // NOVAS VARIÁVEIS DE RECORDE E MOEDAS LOCAIS
+        let highScore = parseInt(localStorage.getItem('pibbleHighScore')) || 0;
+        let currentMatchCoins = 0;
+        let recordBeaten = false;
+        let newRecordTimer = 0;
+
+        const pibbleSprite = new Image(); 
+        const pibbleEatSprite = new Image();
+        
+        function loadEquippedSkin() {
+            let skin = skinsList.find(s => s.id === equippedSkinId) || skinsList[0];
+            pibbleSprite.src = skin.img;
+            pibbleEatSprite.src = skin.imgEat;
+            document.getElementById('mainMenuImage').src = skin.img;
+        }
+        loadEquippedSkin();
+
+        const foodSprite = new Image(); foodSprite.src = 'food.png';
+        const groundSprite = new Image(); groundSprite.src = 'ground.png';
+        const eatAnimSprite = new Image(); eatAnimSprite.src = 'eat_anim.png';
+        const boostSizeSprite = new Image(); boostSizeSprite.src = 'boost_size.png';
+        const boostMagnetSprite = new Image(); boostMagnetSprite.src = 'boost_magnet.png';
+        const boostLifeSprite = new Image(); boostLifeSprite.src = 'boost_life.png';
+        const coinSprite = new Image(); coinSprite.src = 'coin.png';
+
+        let gameState = 'START';
+        let score = 0, lives = 3;
+        
+        let baseSpawnRate = 0.025; 
+        let boostChance = 0.05; 
+        let coinChance = 0.15;
+        let partidasJogadas = 0; let jaReviveuNestaPartida = false; 
+
+        let combo = 0; let comboTextScale = 1;
+        let particles = []; let bgEffects = [];
+
+        const groundHeight = 80; const groundY = canvas.height - groundHeight;
+        const player = {
+            width: 100, height: 100, x: canvas.width / 2 - 50, y: groundY - 90,
+            hbWidth: 60, hbHeight: 60, eatTimer: 0, sizeTimer: 0, magnetTimer: 0,
+            get hbX() { return this.x + (this.width - this.hbWidth) / 2; },
+            get hbY() { return this.y + (this.height - this.hbHeight) / 2; }
+        };
+
+        let fallingItems = []; let activeAnimations = [];
+
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        }
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameState !== 'PLAYING') return;
+            player.x = getPointerPos(e) - player.width / 2;
+            if (player.x < 0) player.x = 0; if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if (gameState !== 'PLAYING') return;
+            player.x = getPointerPos(e) - player.width / 2;
+            if (player.x < 0) player.x = 0; if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+        });
+
+        let lastTapTime = 0;
+        canvas.addEventListener('touchend', (e) => {
+            if (gameState !== 'PLAYING') return;
+            let currentTime = new Date().getTime();
+            let tapLength = currentTime - lastTapTime;
+            if (tapLength < 300 && tapLength > 0) {
+                activateSelectedPower(); 
+                e.preventDefault();
+            }
+            lastTapTime = currentTime;
+        });
+        canvas.addEventListener('dblclick', (e) => {
+            if (gameState !== 'PLAYING') return;
+            activateSelectedPower(); 
+        });
+
+        function selectPower(type) {
+            selectedPower = type;
+            document.getElementById('ui-magnet').classList.remove('selected');
+            document.getElementById('ui-size').classList.remove('selected');
+            document.getElementById('ui-life').classList.remove('selected');
+            document.getElementById(`ui-${type}`).classList.add('selected');
+        }
+
+        function activateSelectedPower() {
+            if (powers[selectedPower] > 0) {
+                if (selectedPower === 'magnet' && player.magnetTimer > 0) return;
+                if (selectedPower === 'size' && player.sizeTimer > 0) return;
+
+                powers[selectedPower]--;
+                localStorage.setItem('pibblePowers', JSON.stringify(powers));
+
+                if (selectedPower === 'magnet') { player.magnetTimer = 300; spawnParticles(player.x, player.y, '#3498DB'); }
+                else if (selectedPower === 'size') { player.sizeTimer = 300; spawnParticles(player.x, player.y, '#9B59B6'); }
+                else if (selectedPower === 'life') { lives++; spawnParticles(player.x, player.y, '#2ECC71'); }
+
+                updateHUD();
+            }
+        }
+        
+        // ===================================================================
+        // SISTEMA DE COMPRAS COM DINHEIRO REAL (GOOGLE PLAY BILLING)
+        // ===================================================================
+        // IDs dos produtos: precisam ser IDÊNTICOS aos criados na Play Console
+        // (Monetização > Produtos > Produtos gerenciados)
+        const COIN_PACKS = {
+            coins_small:  { coins: 300,  productId: 'coins_small'  },
+            coins_medium: { coins: 800,  productId: 'coins_medium' },
+            coins_large:  { coins: 2000, productId: 'coins_large'  }
+        };
+
+        let billingReady = false;
+        let billingProducts = {}; // preenchido após consultar a Play Store
+
+        // Detecta se está rodando dentro do app empacotado (Capacitor) com o plugin de billing
+        function isBillingAvailable() {
+            return typeof window.CdvPurchase !== 'undefined';
+        }
+
+        function initBilling() {
+            if (!isBillingAvailable()) {
+                console.warn('Billing não disponível — rodando em modo navegador/teste.');
+                return;
+            }
+            const { store, ProductType, Platform } = window.CdvPurchase;
+
+            Object.values(COIN_PACKS).forEach(pack => {
+                store.register({
+                    id: pack.productId,
+                    type: ProductType.CONSUMABLE, // moedas são consumíveis (pode comprar de novo)
+                    platform: Platform.GOOGLE_PLAY
+                });
+            });
+
+            // Quando um produto é aprovado pelo Google, credita as moedas e finaliza a transação
+            store.when().approved(transaction => {
+                const pack = Object.values(COIN_PACKS).find(p => p.productId === transaction.products[0].id);
+                if (pack) {
+                    creditarMoedas(pack.coins);
+                }
+                transaction.finish(); // IMPORTANTE: sem isso o Google reembolsa automaticamente
+            });
+
+            store.when().productUpdated(product => {
+                billingProducts[product.id] = product;
+                atualizarPrecosNaTela();
+            });
+
+            store.error(err => {
+                console.error('Erro no billing:', err);
+                alert('Não foi possível completar a compra. Tente novamente.');
+            });
+
+            store.initialize([Platform.GOOGLE_PLAY]).then(() => {
+                billingReady = true;
+            });
+        }
+
+        function atualizarPrecosNaTela() {
+            const map = { coins_small: 'priceSmall', coins_medium: 'priceMedium', coins_large: 'priceLarge' };
+            Object.entries(map).forEach(([productId, elId]) => {
+                const p = billingProducts[productId];
+                const el = document.getElementById(elId);
+                if (p && p.pricing && el) el.innerText = p.pricing.price; // preço já formatado (ex: "R$ 4,90")
+            });
+        }
+
+        function creditarMoedas(quantidade) {
+            totalCoins += quantidade;
+            localStorage.setItem('pibbleCoins', totalCoins);
+            renderShop();
+            updateHUD();
+            alert(`+${quantidade} moedas creditadas! 🎉`);
+        }
+
+        function comprarMoedasReais(packKey) {
+            const pack = COIN_PACKS[packKey];
+            if (!pack) return;
+
+            if (isBillingAvailable() && billingReady) {
+                // Fluxo real: abre a tela nativa de pagamento do Google Play
+                const product = window.CdvPurchase.store.get(pack.productId, window.CdvPurchase.Platform.GOOGLE_PLAY);
+                if (product && product.getOffer()) {
+                    product.getOffer().order();
+                } else {
+                    alert('Produto ainda não carregado. Tente novamente em alguns segundos.');
+                }
+            } else {
+                // MODO TESTE (navegador / sem billing): simula a compra para você testar a UI e o fluxo de crédito.
+                // Isso NUNCA deve ir para produção — remova este bloco 'else' quando publicar, ou
+                // deixe, pois isBillingAvailable() já vai ser false só em ambiente sem o plugin.
+                if (confirm(`[MODO TESTE] Simular compra de ${pack.coins} moedas?`)) {
+                    creditarMoedas(pack.coins);
+                }
+            }
+        }
+
+        // Inicializa o billing assim que o app carrega
+        document.addEventListener('deviceready', initBilling, false);
+        // Fallback: se não estiver num container Cordova/Capacitor, tenta iniciar direto
+        if (!window.cordova) { window.addEventListener('load', initBilling); }
+
+        // Verifica a recompensa diária assim que o jogo carrega (aparece sobre a tela inicial)
+        document.addEventListener('deviceready', checarRecompensaDiaria, false);
+        if (!window.cordova) { window.addEventListener('load', checarRecompensaDiaria); }
+
+        function openShop() { document.getElementById('startScreen').style.display = 'none'; renderShop(); document.getElementById('shopScreen').style.display = 'flex'; }
+        function openShopFromGameOver() { document.getElementById('gameOverScreen').style.display = 'none'; document.getElementById('powers-hud').style.display = 'none'; renderShop(); document.getElementById('shopScreen').style.display = 'flex'; }
+        function closeShop() { document.getElementById('shopScreen').style.display = 'none'; document.getElementById('startScreen').style.display = 'flex'; loadEquippedSkin(); }
+        
+        function buyPower(type, cost) {
+            if (totalCoins >= cost) {
+                totalCoins -= cost;
+                powers[type]++;
+                localStorage.setItem('pibbleCoins', totalCoins);
+                localStorage.setItem('pibblePowers', JSON.stringify(powers));
+                renderShop(); updateHUD();
+            }
+        }
+
+        function renderShop() {
+            document.getElementById('shopCoinsDisplay').innerText = totalCoins;
+            document.getElementById('btnComprarBau').disabled = totalCoins < 100;
+            
+            document.getElementById('btnBuyMagnet').disabled = totalCoins < 50;
+            document.getElementById('btnBuySize').disabled = totalCoins < 50;
+            document.getElementById('btnBuyLife').disabled = totalCoins < 150;
+
+            const container = document.getElementById('skinsContainer');
+            container.innerHTML = '';
+
+            const ordemRaridade = { normal: 0, rare: 1, legendary: 2 };
+            const skinsOrdenadas = [...skinsList].sort((a, b) => ordemRaridade[a.rarity] - ordemRaridade[b.rarity]);
+
+            skinsOrdenadas.forEach(skin => {
+                const isUnlocked = unlockedSkins.includes(skin.id);
+                const isEquipped = equippedSkinId === skin.id;
+                const currentPieces = skinPieces[skin.id] || 0;
+                
+                let rarityClass = skin.rarity === 'legendary' ? 'legendary' : (skin.rarity === 'rare' ? 'rare' : '');
+                let rarityLabel = skin.rarity === 'legendary' ? 'Lendária' : (skin.rarity === 'rare' ? 'Rara' : 'Normal');
+                let tagClass = skin.rarity === 'legendary' ? 'tag-legendary' : (skin.rarity === 'rare' ? 'tag-rare' : 'tag-normal');
+                
+                const card = document.createElement('div');
+                card.className = `skin-card ${isEquipped ? 'equipped' : ''} ${rarityClass}`;
+                
+                let contentHTML = `
+                    <div class="rarity-tag ${tagClass}">${rarityLabel}</div>
+                    <h3>${skin.name}</h3>
+                    <img src="${skin.img}" class="skin-img" alt="${skin.name}" onerror="this.src='skins/skin1.png'">
+                `;
+
+                if (isEquipped) {
+                    contentHTML += `<div class="equipped-txt">Equipado ✔️</div>`;
+                } else if (isUnlocked) {
+                    contentHTML += `<button class="equip-btn" onclick="equipSkin('${skin.id}')">Equipar</button>`;
+                } else {
+                    let progressPercent = (currentPieces / skin.requiredPieces) * 100;
+                    contentHTML += `
+                        <div class="pieces-info">Pedaços: ${currentPieces}/${skin.requiredPieces}</div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${progressPercent}%"></div></div>
+                    `;
+                }
+
+                card.innerHTML = contentHTML;
+                container.appendChild(card);
+            });
+        }
+
+        function abrirBau(preco) {
+            if (totalCoins < preco) return;
+            totalCoins -= preco; localStorage.setItem('pibbleCoins', totalCoins);
+
+            let rng = Math.random(); let selectedRarity = 'normal';
+            if (rng <= 0.005) { selectedRarity = 'legendary'; }
+            else if (rng <= 0.205) { selectedRarity = 'rare'; }
+            else { selectedRarity = 'normal'; }
+
+            let possibleSkins = skinsList.filter(s => s.rarity === selectedRarity && !unlockedSkins.includes(s.id));
+
+            // Se todas as skins dessa raridade já foram liberadas, cai para qualquer raridade que ainda tenha skins disponíveis
+            if (possibleSkins.length === 0) {
+                possibleSkins = skinsList.filter(s => !unlockedSkins.includes(s.id));
+            }
+
+            // Se o jogador já liberou TODAS as skins do jogo, devolve as moedas do baú
+            if (possibleSkins.length === 0) {
+                totalCoins += preco;
+                localStorage.setItem('pibbleCoins', totalCoins);
+                alert('Você já desbloqueou todas as skins disponíveis! 🎉');
+                renderShop();
+                return;
+            }
+
+            let randomSkin = possibleSkins[Math.floor(Math.random() * possibleSkins.length)];
+            
+            processarRecompensa(randomSkin);
+        }
+
+        function processarRecompensa(skin) {
+            let resultadoTexto = "";
+            let imgResult = document.getElementById('chestResultImg'); imgResult.src = skin.img;
+
+            if (unlockedSkins.includes(skin.id)) {
+                let coinBack = skin.rarity === 'legendary' ? 200 : (skin.rarity === 'rare' ? 50 : 25);
+                totalCoins += coinBack; localStorage.setItem('pibbleCoins', totalCoins);
+                resultadoTexto = `Você já tem a skin ${skin.name}!<br>Recebeu ${coinBack}💰 de volta.`;
+            } else {
+                skinPieces[skin.id] = (skinPieces[skin.id] || 0) + 1;
+                if (skinPieces[skin.id] >= skin.requiredPieces) {
+                    unlockedSkins.push(skin.id); localStorage.setItem('pibbleUnlockedSkins', JSON.stringify(unlockedSkins));
+                    resultadoTexto = `PARABÉNS!<br>Você desbloqueou a skin ${skin.name}!`;
+                    if(skin.rarity === 'legendary') equipSkin(skin.id);
+                } else { resultadoTexto = `1x Pedaço - Skin ${skin.name}<br>(${skinPieces[skin.id]}/${skin.requiredPieces})`; }
+                localStorage.setItem('pibbleSkinPieces', JSON.stringify(skinPieces));
+            }
+            document.getElementById('chestResultText').innerHTML = resultadoTexto;
+            document.getElementById('chestResultScreen').style.display = 'flex';
+        }
+
+        function fecharResultadoBau() { document.getElementById('chestResultScreen').style.display = 'none'; renderShop(); }
+
+        function equipSkin(id) {
+            equippedSkinId = id; localStorage.setItem('pibbleEquippedSkin', equippedSkinId);
+            loadEquippedSkin(); renderShop();
+        }
+
+        function mostrarAnuncio(callbackPosAnuncio) {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'none';
+            let adScreen = document.getElementById('adScreen');
+            let countdownSpan = document.getElementById('adCountdown');
+            adScreen.style.display = 'flex';
+            let tempoRestante = 5; countdownSpan.innerText = tempoRestante;
+            let intervalo = setInterval(() => {
+                tempoRestante--; countdownSpan.innerText = tempoRestante;
+                if (tempoRestante <= 0) { clearInterval(intervalo); adScreen.style.display = 'none'; callbackPosAnuncio(); }
+            }, 1000);
+        }
+
+        function assistirAnuncioParaReviver() {
+            mostrarAnuncio(() => {
+                lives = 1; jaReviveuNestaPartida = true; fallingItems = []; 
+                player.eatTimer = 0; player.sizeTimer = 0; player.magnetTimer = 0;
+                player.x = canvas.width / 2 - 50; gameState = 'PLAYING';
+                document.getElementById('powers-hud').style.display = 'flex'; 
+                updateHUD(); update(); 
+            });
+        }
+
+        function iniciarNovaPartida() {
+            partidasJogadas++; 
+            if (partidasJogadas % 5 === 0) { mostrarAnuncio(() => { resetGame(); }); } 
+            else { resetGame(); }
+        }
+
+        function spawnItem() {
+            const randomType = Math.random();
+            let type = 'food', img = foodSprite, size = 55, hbSize = 30;
+            let isBoostOnScreen = fallingItems.some(i => i.type.startsWith('boost'));
+            let isPowerActive = player.sizeTimer > 0 || player.magnetTimer > 0;
+
+            if (randomType > (1 - boostChance) && !isBoostOnScreen && !isPowerActive) {
+                let boostRaffle = Math.random();
+                if (boostRaffle < 0.33) { type = 'boost_size'; img = boostSizeSprite; } 
+                else if (boostRaffle < 0.66) { type = 'boost_magnet'; img = boostMagnetSprite; } 
+                else { type = 'boost_life'; img = boostLifeSprite; }
+            } else if (randomType < coinChance) { type = 'coin'; img = coinSprite; size = 45; hbSize = 25; }
+
+            let speedMultiplier = Math.min(score * 0.005, 6); 
+            
+            fallingItems.push({
+                x: Math.random() * (canvas.width - size), y: -60,
+                width: size, height: size, hbSize: hbSize, type: type, img: img,
+                speed: Math.random() * 1.5 + 2.5 + speedMultiplier, 
+                angle: 0, rotationSpeed: (Math.random() - 0.5) * 0.15
+            });
+        }
+
+        function playEatAnimation(x, y) {
+            activeAnimations.push({ x: x, y: y, width: 60, height: 60, currentFrame: 0, totalFrames: 5, frameTimer: 0, frameSpeed: 4 });
+        }
+
+        function spawnParticles(x, y, baseColor) {
+            let amount = Math.min(5 + Math.floor(combo / 2), 20);
+            for (let i = 0; i < amount; i++) {
+                particles.push({
+                    x: x + 25, y: y + 25,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    life: 1.0, color: baseColor, size: Math.random() * 4 + 2
+                });
+            }
+        }
+
+        function atualizarCorDoFundo() {
+            const container = document.getElementById('game-container');
+            if (score >= 6000) { container.style.backgroundColor = '#C0392B'; } 
+            else if (score >= 4000) { container.style.backgroundColor = '#8E44AD'; } 
+            else if (score >= 2000) { container.style.backgroundColor = '#F39C12'; } 
+            else { container.style.backgroundColor = '#87CEEB'; }
+        }
+
+        // HUD MOSTRA MOEDAS DA PARTIDA E HIGH SCORE ATUALIZADO
+        function updateHUD() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('lives').innerText = lives;
+            document.getElementById('coinsDisplay').innerText = currentMatchCoins; 
+            document.getElementById('highScoreDisplay').innerText = highScore;
+
+            document.getElementById('ui-magnet').style.opacity = powers.magnet > 0 ? '1' : '0.5';
+            document.getElementById('ui-size').style.opacity = powers.size > 0 ? '1' : '0.5';
+            document.getElementById('ui-life').style.opacity = powers.life > 0 ? '1' : '0.5';
+
+            document.getElementById('count-magnet').innerText = powers.magnet;
+            document.getElementById('count-size').innerText = powers.size;
+            document.getElementById('count-life').innerText = powers.life;
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('reviveBtn').style.display = jaReviveuNestaPartida ? 'none' : 'block'; 
+            document.getElementById('gameOverScreen').style.display = 'flex';
+            document.getElementById('powers-hud').style.display = 'none'; 
+        }
+
+        function resetGame() {
+            score = 0; lives = 3; jaReviveuNestaPartida = false; 
+            currentMatchCoins = 0; 
+            recordBeaten = false;
+            newRecordTimer = 0;
+            
+            player.x = canvas.width / 2 - 50;
+            player.eatTimer = 0; player.sizeTimer = 0; player.magnetTimer = 0;
+            fallingItems = []; activeAnimations = []; particles = []; bgEffects = [];
+            combo = 0; comboTextScale = 1; atualizarCorDoFundo();
+            gameState = 'PLAYING';
+            totalCoins = parseInt(localStorage.getItem('pibbleCoins')) || 0; 
+            highScore = parseInt(localStorage.getItem('pibbleHighScore')) || 0;
+
+            updateHUD();
+            selectPower('magnet'); 
+            
+            ctx.imageSmoothingEnabled = false;
+
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('powers-hud').style.display = 'flex'; 
+            
+            update();
+        }
+
+        function update() {
+            if (gameState !== 'PLAYING') return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.imageSmoothingEnabled = false;
+
+            if (score >= 2000 && Math.random() < (score * 0.00002)) {
+                bgEffects.push({
+                    x: Math.random() * canvas.width, y: canvas.height,
+                    speed: Math.random() * 4 + 3, size: Math.random() * 3 + 1,
+                    color: ['#FFFFFF', '#FFD700', '#FF69B4'][Math.floor(Math.random() * 3)]
+                });
+            }
+            for (let i = 0; i < bgEffects.length; i++) {
+                let p = bgEffects[i]; p.y -= p.speed;
+                ctx.fillStyle = p.color; ctx.globalAlpha = 0.4;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1.0;
+                if (p.y < -10) { bgEffects.splice(i, 1); i--; }
+            }
+
+            if (groundSprite.complete && groundSprite.naturalHeight !== 0) { ctx.drawImage(groundSprite, 0, groundY, canvas.width, groundHeight); } 
+            else { ctx.fillStyle = '#654321'; ctx.fillRect(0, groundY, canvas.width, groundHeight); }
+
+            if (player.sizeTimer > 0) {
+                player.sizeTimer--; player.width = 150; player.height = 150; player.hbWidth = 100; player.hbHeight = 100; player.y = groundY - 130;
+            } else {
+                player.width = 100; player.height = 100; player.hbWidth = 60; player.hbHeight = 60; player.y = groundY - 90;
+            }
+
+            if (player.magnetTimer > 0) player.magnetTimer--;
+
+            let currentPibbleSprite = player.eatTimer > 0 ? pibbleEatSprite : pibbleSprite;
+            if (currentPibbleSprite.complete && currentPibbleSprite.naturalHeight !== 0) { ctx.drawImage(currentPibbleSprite, player.x, player.y, player.width, player.height); } 
+            else { ctx.fillStyle = player.sizeTimer > 0 || player.magnetTimer > 0 ? 'purple' : (player.eatTimer > 0 ? 'darkred' : 'saddlebrown'); ctx.fillRect(player.x, player.y, player.width, player.height); }
+
+            if (player.eatTimer > 0) player.eatTimer--;
+
+            for (let i = 0; i < fallingItems.length; i++) {
+                let item = fallingItems[i]; item.angle += item.rotationSpeed;
+
+                if (player.magnetTimer > 0 && (item.type === 'food' || item.type === 'coin')) {
+                    let mouthX = player.x + (player.width / 2); let mouthY = player.y + (player.height / 2);
+                    let itemCenterX = item.x + (item.width / 2); let itemCenterY = item.y + (item.height / 2);
+                    let distY = mouthY - itemCenterY; let distX = mouthX - itemCenterX;
+                    let distance = Math.sqrt(distX*distX + distY*distY);
+                    if (distance > 0) { item.x += (distX / distance) * 7; item.y += (distY / distance) * 7; }
+                } else { item.y += item.speed; }
+
+                ctx.save(); ctx.translate(item.x + item.width / 2, item.y + item.height / 2); ctx.rotate(item.angle);
+                if (item.img.complete && item.img.naturalHeight !== 0) { ctx.drawImage(item.img, -item.width / 2, -item.height / 2, item.width, item.height); } 
+                else { ctx.fillStyle = item.type === 'coin' ? 'yellow' : (item.type === 'food' ? 'red' : 'gold'); ctx.fillRect(-item.width / 2, -item.height / 2, item.width, item.height); }
+                ctx.restore();
+
+                let itemHbX = item.x + (item.width - item.hbSize) / 2; let itemHbY = item.y + (item.height - item.hbSize) / 2;
+                
+                if (player.hbX < itemHbX + item.hbSize && player.hbX + player.hbWidth > itemHbX && player.hbY < itemHbY + item.hbSize && player.hbY + player.hbHeight > itemHbY) {
+                    playEatAnimation(item.x, item.y); player.eatTimer = 12; 
+                    
+                    combo++; comboTextScale = 1.4; 
+                    
+                    if (item.type === 'food') { score += 10; spawnParticles(item.x, item.y, '#E74C3C'); } 
+                    // ATUALIZA MOEDAS DO SALDO GLOBAL E DA PARTIDA LOCAL
+                    else if (item.type === 'coin') { totalCoins++; currentMatchCoins++; localStorage.setItem('pibbleCoins', totalCoins); score += 5; spawnParticles(item.x, item.y, '#F1C40F'); }
+                    else if (item.type === 'boost_size') { player.sizeTimer = 300; score += 50; spawnParticles(item.x, item.y, '#9B59B6'); }
+                    else if (item.type === 'boost_magnet') { player.magnetTimer = 300; score += 50; spawnParticles(item.x, item.y, '#3498DB'); }
+                    else if (item.type === 'boost_life') { lives++; score += 50; spawnParticles(item.x, item.y, '#2ECC71'); }
+                    
+                    // SISTEMA VERIFICADOR DE RECORDE
+                    if (score > highScore) {
+                        if (!recordBeaten && highScore > 0) {
+                            newRecordTimer = 100; // Tempo de exibição da animação
+                            // Grande explosão festiva de partículas douradas e brancas
+                            for(let k=0; k<25; k++) {
+                                particles.push({
+                                    x: canvas.width / 2 - 25, y: canvas.height / 3,
+                                    vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10,
+                                    life: 1.0, color: k % 2 === 0 ? '#FFD700' : '#FFFFFF', size: Math.random() * 5 + 3
+                                });
+                            }
+                        }
+                        highScore = score;
+                        localStorage.setItem('pibbleHighScore', highScore);
+                        recordBeaten = true;
+                    }
+
+                    atualizarCorDoFundo();
+                    fallingItems.splice(i, 1); i--; updateHUD(); continue;
+                }
+
+                if (item.y + item.height > groundY) {
+                    if (combo > 0) combo = 0;
+                    if (item.type === 'food') { lives--; updateHUD(); if (lives <= 0) triggerGameOver(); }
+                    fallingItems.splice(i, 1); i--;
+                }
+            }
+
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+                if (p.life <= 0) { particles.splice(i, 1); i--; continue; }
+                ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+                ctx.fillRect(p.x, p.y, p.size, p.size); ctx.globalAlpha = 1.0;
+            }
+
+            for (let i = 0; i < activeAnimations.length; i++) {
+                let anim = activeAnimations[i]; anim.frameTimer++;
+                if (anim.frameTimer >= anim.frameSpeed) { anim.frameTimer = 0; anim.currentFrame++; }
+                if (anim.currentFrame >= anim.totalFrames) { activeAnimations.splice(i, 1); i--; continue; }
+                if (eatAnimSprite.complete && eatAnimSprite.naturalHeight !== 0) {
+                    let frameWidth = eatAnimSprite.width / anim.totalFrames; let frameHeight = eatAnimSprite.height;
+                    ctx.drawImage(eatAnimSprite, anim.currentFrame * frameWidth, 0, frameWidth, frameHeight, anim.x, anim.y, anim.width, anim.height);
+                }
+            }
+
+            // RENDERIZAÇÃO DA ANIMAÇÃO DE NOVO RECORDE FLUTUANTE
+            if (newRecordTimer > 0) {
+                newRecordTimer--;
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 3);
+                let recordScale = 1 + Math.sin(newRecordTimer * 0.15) * 0.12;
+                ctx.scale(recordScale, recordScale);
+                ctx.font = '900 24px Arial'; ctx.textAlign = 'center';
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 5;
+                ctx.strokeText('🏆 NOVO RECORDE! 🏆', 0, 0);
+                
+                let gradient = ctx.createLinearGradient(-80, 0, 80, 0);
+                gradient.addColorStop(0, '#FFD700');
+                gradient.addColorStop(0.5, '#FFFFFF');
+                gradient.addColorStop(1, '#FFD700');
+                ctx.fillStyle = gradient;
+                ctx.fillText('🏆 NOVO RECORDE! 🏆', 0, 0);
+                ctx.restore();
+            }
+
+            if (combo > 1) {
+                ctx.save();
+                ctx.translate(canvas.width / 2, 380);
+                if (comboTextScale > 1) comboTextScale -= 0.05; 
+                ctx.scale(comboTextScale, comboTextScale);
+                ctx.font = '900 24px Arial'; ctx.textAlign = 'center';
+                ctx.fillStyle = combo >= 30 ? '#FF69B4' : (combo >= 20 ? '#3498DB' : (combo >= 10 ? '#00FF00' : '#FFFFFF'));
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)'; ctx.lineWidth = 4;
+                let textoCombo = `${combo} ACERTOS!`;
+                ctx.strokeText(textoCombo, 0, 0); ctx.fillText(textoCombo, 0, 0);
+                ctx.restore();
+            }
+
+            let currentSpawnRate = Math.min(baseSpawnRate + (score * 0.00005), 0.1);
+            if (Math.random() < currentSpawnRate) spawnItem();
+            
+            requestAnimationFrame(update);
+        }
+
+        updateHUD();
+    </script>
+</body>
+</html>
