@@ -162,29 +162,106 @@
         #dailyRewardCurrentBox { background: rgba(0,0,0,0.5); border-radius: 10px; padding: 12px 20px; margin-bottom: 15px; text-align: center; }
         #dailyRewardCurrentBox .amount { font-size: 24px; font-weight: bold; color: #FFD700; }
         .double-btn { background: #2ecc71; box-shadow: 0 5px 0 #27ae60; }
+
+        .icon-btn {
+            position: absolute; z-index: 100; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.6);
+            border-radius: 50%; width: 36px; height: 36px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .icon-btn img { width: 22px; height: 22px; object-fit: contain; }
+        .icon-btn .icon-fallback { font-size: 16px; color: white; display: none; }
+
+        #settingsScreen { z-index: 70; background: rgba(0,0,0,0.75); }
+        .settings-card {
+            background: linear-gradient(180deg, #FFF6DD 0%, #FFE3A0 100%);
+            border: 6px solid #E67E22; border-radius: 26px; padding: 22px 18px;
+            box-shadow: 0 8px 0 #C06B12, 0 12px 24px rgba(0,0,0,0.5);
+            width: 85%; max-width: 290px; box-sizing: border-box; position: relative;
+        }
+        .settings-card h1 {
+            color: #E67E22; font-size: 26px; margin: 0 0 4px 0;
+            -webkit-text-stroke: 2px #7A4300; text-shadow: 2px 3px 0 rgba(0,0,0,0.15);
+        }
+        .settings-row { width: 100%; margin-bottom: 18px; text-align: left; }
+        .settings-row .settings-label {
+            display: flex; justify-content: space-between; align-items: center;
+            color: #6E4A1E; font-weight: bold; font-size: 15px; margin-bottom: 6px;
+        }
+        .settings-row .settings-label .vol-value {
+            background: #E67E22; color: white; padding: 2px 10px; border-radius: 10px; font-size: 13px;
+            box-shadow: 0 2px 0 #C06B12;
+        }
+        .settings-card input[type=range] {
+            -webkit-appearance: none; appearance: none; width: 100%; height: 12px; border-radius: 10px;
+            background: #fff; border: 3px solid #6E4A1E; outline: none; cursor: pointer;
+        }
+        .settings-card input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 28px; height: 28px; border-radius: 50%;
+            background: #FF6B6B; border: 3px solid white; box-shadow: 0 3px 0 #B33; cursor: pointer;
+        }
+        .settings-card input[type=range]::-moz-range-thumb {
+            width: 22px; height: 22px; border-radius: 50%; background: #FF6B6B; border: 3px solid white;
+            box-shadow: 0 3px 0 #B33; cursor: pointer;
+        }
+        .settings-card .btn { width: 80%; margin-top: 4px; }
+
+        .notif-dot {
+            position: absolute; top: -6px; right: -6px; width: 16px; height: 16px;
+            background: #e74c3c; border-radius: 50%; border: 2px solid white; display: none;
+        }
     </style>
 </head>
 <body>
 
     <div id="game-container">
+
+        <button id="muteBtn" onclick="alternarMudo()" class="icon-btn" style="top:8px; right:8px;">
+            <img id="muteIcon" src="icon_sound_on.png" alt="Som" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="icon-fallback" id="muteFallback">🔊</span>
+        </button>
+        <button id="settingsBtn" onclick="abrirConfiguracoes()" class="icon-btn" style="top:8px; right:50px;">
+            <img src="icon_settings.png" alt="Configurações" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <span class="icon-fallback">⚙️</span>
+        </button>
         
         <div id="startScreen" class="overlay">
             <h1>Pibble Food Rush</h1>
             <img src="skins/skin1.png" id="mainMenuImage" alt="Pibble">
             <button class="btn" onclick="iniciarNovaPartida()">JOGAR</button>
             <button class="btn shop-btn" onclick="openShop()">LOJA 🛒</button>
+            <button class="btn" style="background:#9b59b6; box-shadow:0 5px 0 #8e44ad; position:relative;" onclick="abrirTelaLoginDiario()">
+                Login Diário 🎁
+                <span id="dailyNotifDot" class="notif-dot"></span>
+            </button>
+        </div>
+
+        <div id="settingsScreen" class="overlay">
+            <div class="settings-card">
+                <h1>⚙️ Ajustes</h1>
+                <p style="color:#8B5E1E; font-size:12px; margin:0 0 16px 0;">Deixe do seu jeito!</p>
+                <div class="settings-row">
+                    <div class="settings-label"><span>🎵 Música</span><span class="vol-value" id="musicVolLabel">45%</span></div>
+                    <input type="range" id="musicVolSlider" min="0" max="100" value="45" oninput="mudarVolumeMusica(this.value)">
+                </div>
+                <div class="settings-row">
+                    <div class="settings-label"><span>🔊 Efeitos</span><span class="vol-value" id="sfxVolLabel">70%</span></div>
+                    <input type="range" id="sfxVolSlider" min="0" max="100" value="70" oninput="mudarVolumeSFX(this.value)">
+                </div>
+                <button class="btn" onclick="fecharConfiguracoes()">VOLTAR</button>
+            </div>
         </div>
 
         <div id="dailyRewardScreen" class="overlay">
             <h1>🎁 Recompensa Diária</h1>
-            <p class="subtitle">Entre todo dia para ganhar prêmios! Complete os 7 dias para o Baú Especial.</p>
+            <p class="subtitle" id="dailyRewardSubtitle">Entre todo dia para ganhar prêmios! Complete os 7 dias para o Baú Especial.</p>
             <div class="days-grid" id="dailyRewardGrid"></div>
             <div id="dailyRewardCurrentBox">
                 <div>Hoje você ganha:</div>
                 <div class="amount" id="dailyRewardAmount">0 💰</div>
             </div>
-            <button class="btn" onclick="coletarRecompensaDiaria(false)">Coletar</button>
+            <button class="btn" id="btnColetarRecompensa" onclick="coletarRecompensaDiaria(false)">Coletar</button>
             <button class="btn double-btn ad-btn" id="btnDobrarRecompensa" onclick="dobrarRecompensaDiaria()">Dobrar (Anúncio) 📺</button>
+            <button class="btn" id="btnFecharLoginDiario" style="display:none;" onclick="fecharTelaLoginDiario()">VOLTAR</button>
         </div>
 
         <div id="shopScreen" class="overlay">
@@ -238,7 +315,7 @@
             </div>
 
             <div class="skins-container" id="skinsContainer"></div>
-            <button class="btn" style="margin-top: 10px; width: 90%; padding: 10px; flex-shrink: 0;" onclick="closeShop()">VOLTAR</button>
+            <button class="btn" style="margin-top: 10px; width: 90%; padding: 10px; flex-shrink: 0;" onclick="jogarDaLoja()">JOGAR</button>
         </div>
 
         <div id="chestResultScreen" class="overlay">
@@ -350,7 +427,7 @@
         function checarRecompensaDiaria() {
             const hoje = dataDeHoje();
 
-            if (lastClaimDate === hoje) return; // já coletou hoje, não mostra de novo
+            if (lastClaimDate === hoje) { atualizarNotifDiaria(); return; } // já coletou hoje, não mostra de novo
 
             if (!lastLoginDate) {
                 dailyStreak = 1; // primeira vez jogando
@@ -370,8 +447,29 @@
             const configDia = DAILY_REWARDS[dailyStreak - 1];
             pendingDailyReward = { day: dailyStreak, ...configDia, dobrado: false };
 
+            atualizarNotifDiaria();
             renderDailyRewardScreen();
             document.getElementById('dailyRewardScreen').style.display = 'flex';
+        }
+
+        // Mostra/esconde a bolinha vermelha de notificação no botão da tela inicial
+        function atualizarNotifDiaria() {
+            const dot = document.getElementById('dailyNotifDot');
+            if (dot) dot.style.display = pendingDailyReward ? 'block' : 'none';
+        }
+
+        // Abre a tela de login diário manualmente pelo botão da tela inicial
+        function abrirTelaLoginDiario() {
+            tocarSFX('button');
+            document.getElementById('startScreen').style.display = 'none';
+            renderDailyRewardScreen();
+            document.getElementById('dailyRewardScreen').style.display = 'flex';
+        }
+
+        // Fecha a tela de login diário e volta pra tela inicial (usado no modo visualização)
+        function fecharTelaLoginDiario() {
+            document.getElementById('dailyRewardScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'flex';
         }
 
         const NOMES_BOOST = { magnet: 'Ímã', size: 'Gigante', life: 'Vida Extra' };
@@ -385,12 +483,17 @@
         function renderDailyRewardScreen() {
             const grid = document.getElementById('dailyRewardGrid');
             grid.innerHTML = '';
+
+            // Se não há recompensa pendente, é visualização (já coletou hoje) — usa o streak salvo
+            const temPendente = !!pendingDailyReward;
+            const diaReferencia = temPendente ? pendingDailyReward.day : dailyStreak;
+
             DAILY_REWARDS.forEach(r => {
                 const box = document.createElement('div');
                 let classes = 'day-box';
                 if (r.type === 'chest') classes += ' chest-day';
-                if (r.day < pendingDailyReward.day) classes += ' done';
-                if (r.day === pendingDailyReward.day) classes += ' today';
+                if (r.day < diaReferencia || (!temPendente && r.day <= diaReferencia)) classes += ' done';
+                if (temPendente && r.day === diaReferencia) classes += ' today';
                 box.className = classes;
                 box.innerHTML = `
                     <div class="day-label">Dia ${r.day}</div>
@@ -400,14 +503,30 @@
             });
 
             const amountEl = document.getElementById('dailyRewardAmount');
-            amountEl.innerText = pendingDailyReward.type === 'chest' ? 'Baú Especial 🎁' : descreverRecompensa(pendingDailyReward);
+            const claimBtn = document.getElementById('btnColetarRecompensa');
+            const doubleBtn = document.getElementById('btnDobrarRecompensa');
+            const closeBtn = document.getElementById('btnFecharLoginDiario');
+            const subtitleEl = document.getElementById('dailyRewardSubtitle');
 
-            // Boosts e o baú não fazem sentido dobrar (só dobramos moedas)
-            document.getElementById('btnDobrarRecompensa').style.display = pendingDailyReward.type === 'coins' ? 'block' : 'none';
+            if (temPendente) {
+                subtitleEl.innerText = 'Entre todo dia para ganhar prêmios! Complete os 7 dias para o Baú Especial.';
+                amountEl.innerText = pendingDailyReward.type === 'chest' ? 'Baú Especial 🎁' : descreverRecompensa(pendingDailyReward);
+                claimBtn.style.display = 'block';
+                closeBtn.style.display = 'none';
+                // Boosts e o baú não fazem sentido dobrar (só dobramos moedas)
+                doubleBtn.style.display = pendingDailyReward.type === 'coins' ? 'block' : 'none';
+            } else {
+                subtitleEl.innerText = 'Você já coletou a recompensa de hoje. Volte amanhã para continuar a sequência!';
+                amountEl.innerText = 'Volte amanhã ⏳';
+                claimBtn.style.display = 'none';
+                doubleBtn.style.display = 'none';
+                closeBtn.style.display = 'block';
+            }
         }
 
         function coletarRecompensaDiaria(viaAnuncio) {
             if (!pendingDailyReward) return;
+            tocarSFX('daily');
 
             if (pendingDailyReward.type === 'chest') {
                 document.getElementById('dailyRewardScreen').style.display = 'none';
@@ -441,6 +560,8 @@
 
             localStorage.setItem('pibbleLastClaimDate', dataDeHoje());
             pendingDailyReward = null;
+            atualizarNotifDiaria();
+            document.getElementById('startScreen').style.display = 'flex';
         }
 
         function dobrarRecompensaDiaria() {
@@ -479,12 +600,116 @@
         const boostLifeSprite = new Image(); boostLifeSprite.src = 'boost_life.png';
         const coinSprite = new Image(); coinSprite.src = 'coin.png';
 
+        // ===================================================================
+        // SISTEMA DE ÁUDIO — MÚSICA E EFEITOS SONOROS
+        // ===================================================================
+        // Coloque os arquivos de áudio na mesma pasta do HTML com esses nomes exatos
+        // (ou troque os nomes abaixo pelos nomes dos seus arquivos).
+        const AUDIO_FILES = {
+            musicMenu: 'music_menu.mp3',   // toca em loop na tela inicial / loja / telas de recompensa
+            musicGame: 'music_game.mp3',   // toca em loop durante a partida
+            eat:      'sfx_eat.mp3',       // comeu uma ração
+            coin:     'sfx_coin.mp3',      // pegou moeda
+            boost:    'sfx_boost.mp3',     // pegou um power-up
+            button:   'sfx_button.mp3',    // clique em botão/menu
+            gameOver: 'sfx_gameover.mp3',  // fim de jogo
+            chest:    'sfx_chest.mp3',     // abriu baú
+            record:   'sfx_record.mp3',    // bateu recorde
+            daily:    'sfx_daily.mp3'      // coletou recompensa diária
+        };
+
+        let soundMuted = localStorage.getItem('pibbleSoundMuted') === 'true';
+        let MUSIC_VOLUME = localStorage.getItem('pibbleMusicVolume') !== null ? parseFloat(localStorage.getItem('pibbleMusicVolume')) : 0.45;
+        let SFX_VOLUME = localStorage.getItem('pibbleSfxVolume') !== null ? parseFloat(localStorage.getItem('pibbleSfxVolume')) : 0.7;
+
+        const musicMenu = new Audio(AUDIO_FILES.musicMenu); musicMenu.loop = true; musicMenu.volume = MUSIC_VOLUME;
+        const musicGame = new Audio(AUDIO_FILES.musicGame); musicGame.loop = true; musicGame.volume = MUSIC_VOLUME;
+
+        // Toca um efeito sonoro. Usa um novo Audio() a cada chamada para permitir sobreposição
+        // (ex: comer várias rações rapidamente sem cortar o som anterior).
+        function tocarSFX(nome) {
+            if (soundMuted) return;
+            const arquivo = AUDIO_FILES[nome];
+            if (!arquivo) return;
+            const som = new Audio(arquivo);
+            som.volume = SFX_VOLUME;
+            som.play().catch(() => {}); // ignora erro se o navegador bloquear autoplay
+        }
+
+        function pararTodaMusica() { musicMenu.pause(); musicGame.pause(); }
+
+        function tocarMusicaMenu() {
+            if (soundMuted) return;
+            musicGame.pause();
+            if (musicMenu.paused) musicMenu.play().catch(() => {});
+        }
+
+        function tocarMusicaJogo() {
+            if (soundMuted) return;
+            musicMenu.pause();
+            if (musicGame.paused) { musicGame.currentTime = 0; musicGame.play().catch(() => {}); }
+        }
+
+        function alternarMudo() {
+            soundMuted = !soundMuted;
+            localStorage.setItem('pibbleSoundMuted', soundMuted);
+            atualizarBotaoMudo();
+            if (soundMuted) {
+                pararTodaMusica();
+            } else {
+                if (gameState === 'PLAYING') tocarMusicaJogo(); else tocarMusicaMenu();
+            }
+        }
+
+        function atualizarBotaoMudo() {
+            const icon = document.getElementById('muteIcon');
+            const fallback = document.getElementById('muteFallback');
+            if (icon) { icon.style.display = ''; icon.src = soundMuted ? 'icon_sound_off.png' : 'icon_sound_on.png'; }
+            if (fallback) { fallback.style.display = 'none'; fallback.innerText = soundMuted ? '🔇' : '🔊'; }
+        }
+
+        function abrirConfiguracoes() {
+            document.getElementById('musicVolSlider').value = Math.round(MUSIC_VOLUME * 100);
+            document.getElementById('musicVolLabel').innerText = Math.round(MUSIC_VOLUME * 100) + '%';
+            document.getElementById('sfxVolSlider').value = Math.round(SFX_VOLUME * 100);
+            document.getElementById('sfxVolLabel').innerText = Math.round(SFX_VOLUME * 100) + '%';
+            document.getElementById('settingsScreen').style.display = 'flex';
+        }
+
+        function fecharConfiguracoes() {
+            document.getElementById('settingsScreen').style.display = 'none';
+        }
+
+        function mudarVolumeMusica(valor) {
+            MUSIC_VOLUME = valor / 100;
+            musicMenu.volume = MUSIC_VOLUME;
+            musicGame.volume = MUSIC_VOLUME;
+            localStorage.setItem('pibbleMusicVolume', MUSIC_VOLUME);
+            document.getElementById('musicVolLabel').innerText = valor + '%';
+        }
+
+        function mudarVolumeSFX(valor) {
+            SFX_VOLUME = valor / 100;
+            localStorage.setItem('pibbleSfxVolume', SFX_VOLUME);
+            document.getElementById('sfxVolLabel').innerText = valor + '%';
+            tocarSFX('button'); // toca uma prévia pro jogador ouvir o novo volume
+        }
+
+        // Navegadores bloqueiam áudio automático até o usuário interagir com a página.
+        // Assim que o primeiro toque/clique acontecer, iniciamos a música do menu (se não estiver mudo).
+        function iniciarAudioSeNecessario() {
+            if (!soundMuted && gameState === 'START') tocarMusicaMenu();
+        }
+        document.addEventListener('click', iniciarAudioSeNecessario, { once: true });
+        document.addEventListener('touchstart', iniciarAudioSeNecessario, { once: true });
+
         let gameState = 'START';
         let score = 0, lives = 3;
         
-        let baseSpawnRate = 0.025; 
+        let baseSpawnRate = 0.014; 
         let boostChance = 0.05; 
         let coinChance = 0.15;
+        const MAX_ITENS_NA_TELA = 4; // limite de rações caindo ao mesmo tempo
         let partidasJogadas = 0; let jaReviveuNestaPartida = false; 
 
         let combo = 0; let comboTextScale = 1;
@@ -661,12 +886,14 @@
         document.addEventListener('deviceready', checarRecompensaDiaria, false);
         if (!window.cordova) { window.addEventListener('load', checarRecompensaDiaria); }
 
-        function openShop() { document.getElementById('startScreen').style.display = 'none'; renderShop(); document.getElementById('shopScreen').style.display = 'flex'; }
-        function openShopFromGameOver() { document.getElementById('gameOverScreen').style.display = 'none'; document.getElementById('powers-hud').style.display = 'none'; renderShop(); document.getElementById('shopScreen').style.display = 'flex'; }
-        function closeShop() { document.getElementById('shopScreen').style.display = 'none'; document.getElementById('startScreen').style.display = 'flex'; loadEquippedSkin(); }
+        function openShop() { tocarSFX('button'); document.getElementById('startScreen').style.display = 'none'; renderShop(); document.getElementById('shopScreen').style.display = 'flex'; tocarMusicaMenu(); }
+        function openShopFromGameOver() { tocarSFX('button'); document.getElementById('gameOverScreen').style.display = 'none'; document.getElementById('powers-hud').style.display = 'none'; renderShop(); document.getElementById('shopScreen').style.display = 'flex'; tocarMusicaMenu(); }
+        function closeShop() { tocarSFX('button'); document.getElementById('shopScreen').style.display = 'none'; document.getElementById('startScreen').style.display = 'flex'; loadEquippedSkin(); }
+        function jogarDaLoja() { tocarSFX('button'); document.getElementById('shopScreen').style.display = 'none'; iniciarNovaPartida(); }
         
         function buyPower(type, cost) {
             if (totalCoins >= cost) {
+                tocarSFX('button');
                 totalCoins -= cost;
                 powers[type]++;
                 localStorage.setItem('pibbleCoins', totalCoins);
@@ -726,6 +953,7 @@
 
         function abrirBau(preco) {
             if (totalCoins < preco) return;
+            tocarSFX('chest');
             totalCoins -= preco; localStorage.setItem('pibbleCoins', totalCoins);
 
             let rng = Math.random(); let selectedRarity = 'normal';
@@ -778,6 +1006,7 @@
         function fecharResultadoBau() { document.getElementById('chestResultScreen').style.display = 'none'; renderShop(); }
 
         function equipSkin(id) {
+            tocarSFX('button');
             equippedSkinId = id; localStorage.setItem('pibbleEquippedSkin', equippedSkinId);
             loadEquippedSkin(); renderShop();
         }
@@ -824,12 +1053,12 @@
                 else { type = 'boost_life'; img = boostLifeSprite; }
             } else if (randomType < coinChance) { type = 'coin'; img = coinSprite; size = 45; hbSize = 25; }
 
-            let speedMultiplier = Math.min(score * 0.005, 6); 
+            let speedMultiplier = Math.min(score * 0.002, 3); 
             
             fallingItems.push({
                 x: Math.random() * (canvas.width - size), y: -60,
                 width: size, height: size, hbSize: hbSize, type: type, img: img,
-                speed: Math.random() * 1.5 + 2.5 + speedMultiplier, 
+                speed: Math.random() * 1 + 1.5 + speedMultiplier, 
                 angle: 0, rotationSpeed: (Math.random() - 0.5) * 0.15
             });
         }
@@ -850,12 +1079,12 @@
             }
         }
 
+        const BG_COLORS = ['#87CEEB', '#F39C12', '#8E44AD', '#C0392B', '#16A085', '#2980B9', '#D35400', '#27AE60'];
+
         function atualizarCorDoFundo() {
             const container = document.getElementById('game-container');
-            if (score >= 6000) { container.style.backgroundColor = '#C0392B'; } 
-            else if (score >= 4000) { container.style.backgroundColor = '#8E44AD'; } 
-            else if (score >= 2000) { container.style.backgroundColor = '#F39C12'; } 
-            else { container.style.backgroundColor = '#87CEEB'; }
+            const estagio = Math.floor(score / 500) % BG_COLORS.length;
+            container.style.backgroundColor = BG_COLORS[estagio];
         }
 
         // HUD MOSTRA MOEDAS DA PARTIDA E HIGH SCORE ATUALIZADO
@@ -876,6 +1105,8 @@
 
         function triggerGameOver() {
             gameState = 'GAMEOVER';
+            tocarSFX('gameOver');
+            tocarMusicaMenu();
             document.getElementById('finalScore').innerText = score;
             document.getElementById('reviveBtn').style.display = jaReviveuNestaPartida ? 'none' : 'block'; 
             document.getElementById('gameOverScreen').style.display = 'flex';
@@ -893,6 +1124,7 @@
             fallingItems = []; activeAnimations = []; particles = []; bgEffects = [];
             combo = 0; comboTextScale = 1; atualizarCorDoFundo();
             gameState = 'PLAYING';
+            tocarMusicaJogo();
             totalCoins = parseInt(localStorage.getItem('pibbleCoins')) || 0; 
             highScore = parseInt(localStorage.getItem('pibbleHighScore')) || 0;
 
@@ -968,17 +1200,18 @@
                     
                     combo++; comboTextScale = 1.4; 
                     
-                    if (item.type === 'food') { score += 10; spawnParticles(item.x, item.y, '#E74C3C'); } 
+                    if (item.type === 'food') { tocarSFX('eat'); score += 10; spawnParticles(item.x, item.y, '#E74C3C'); } 
                     // ATUALIZA MOEDAS DO SALDO GLOBAL E DA PARTIDA LOCAL
-                    else if (item.type === 'coin') { totalCoins++; currentMatchCoins++; localStorage.setItem('pibbleCoins', totalCoins); score += 5; spawnParticles(item.x, item.y, '#F1C40F'); }
-                    else if (item.type === 'boost_size') { player.sizeTimer = 300; score += 50; spawnParticles(item.x, item.y, '#9B59B6'); }
-                    else if (item.type === 'boost_magnet') { player.magnetTimer = 300; score += 50; spawnParticles(item.x, item.y, '#3498DB'); }
-                    else if (item.type === 'boost_life') { lives++; score += 50; spawnParticles(item.x, item.y, '#2ECC71'); }
+                    else if (item.type === 'coin') { tocarSFX('coin'); totalCoins++; currentMatchCoins++; localStorage.setItem('pibbleCoins', totalCoins); score += 5; spawnParticles(item.x, item.y, '#F1C40F'); }
+                    else if (item.type === 'boost_size') { tocarSFX('boost'); player.sizeTimer = 300; score += 50; spawnParticles(item.x, item.y, '#9B59B6'); }
+                    else if (item.type === 'boost_magnet') { tocarSFX('boost'); player.magnetTimer = 300; score += 50; spawnParticles(item.x, item.y, '#3498DB'); }
+                    else if (item.type === 'boost_life') { tocarSFX('boost'); lives++; score += 50; spawnParticles(item.x, item.y, '#2ECC71'); }
                     
                     // SISTEMA VERIFICADOR DE RECORDE
                     if (score > highScore) {
                         if (!recordBeaten && highScore > 0) {
                             newRecordTimer = 100; // Tempo de exibição da animação
+                            tocarSFX('record');
                             // Grande explosão festiva de partículas douradas e brancas
                             for(let k=0; k<25; k++) {
                                 particles.push({
@@ -1041,7 +1274,7 @@
                 ctx.restore();
             }
 
-            if (combo > 1) {
+            if (combo >= 10) {
                 ctx.save();
                 ctx.translate(canvas.width / 2, 380);
                 if (comboTextScale > 1) comboTextScale -= 0.05; 
@@ -1054,13 +1287,14 @@
                 ctx.restore();
             }
 
-            let currentSpawnRate = Math.min(baseSpawnRate + (score * 0.00005), 0.1);
-            if (Math.random() < currentSpawnRate) spawnItem();
+            let currentSpawnRate = Math.min(baseSpawnRate + (score * 0.00002), 0.05);
+            if (Math.random() < currentSpawnRate && fallingItems.length < MAX_ITENS_NA_TELA) spawnItem();
             
             requestAnimationFrame(update);
         }
 
         updateHUD();
+        atualizarBotaoMudo();
     </script>
 </body>
 </html>
